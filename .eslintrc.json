@@ -5,6 +5,6 @@
   },
   "rules": {
     "@typescript-eslint/strict-boolean-expressions": "off",
-    "@typescript-eslint/camelcase": "on"
+    "@typescript-eslint/camelcase": "off"
   }
 }
