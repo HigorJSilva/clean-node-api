@@ -1,6 +1,6 @@
 {
   "hooks": {
-    "pre-commit": "lint-staged FORCE_COLOR=1",
+    "pre-commit": "env FORCE_COLOR=1 lint-staged",
     "pre-push": "npm run test:ci"
   }
 }
