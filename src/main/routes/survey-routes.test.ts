@@ -1,9 +1,12 @@
+import { sign } from 'jsonwebtoken'
 import { Collection } from 'mongodb'
 import request from 'supertest'
 import { MongoHelper } from '../../infra/db/mongodb/helpers/mongo-helper'
 import app from '../config/app'
+import env from '../config/env'
 
 let surveyCollection: Collection
+let accountCollection: Collection
 
 describe('Survey routes', () => {
   beforeAll(async () => {
@@ -17,10 +20,12 @@ describe('Survey routes', () => {
   beforeEach(async () => {
     surveyCollection = await MongoHelper.getCollection('survey')
     await surveyCollection.deleteMany({})
+    accountCollection = await MongoHelper.getCollection('accounts')
+    await accountCollection.deleteMany({})
   })
 
   describe('POST /surveys', () => {
-    test('Should return 403 on add survey success without accessTOken', async () => {
+    test('Should return 403 on add survey success with valid accessToken', async () => {
       await request(app)
         .post('/api/surveys')
         .send({
@@ -34,5 +39,39 @@ describe('Survey routes', () => {
         })
         .expect(403)
     })
+  })
+
+  test('Should return 204 on add survey success with admin accessToken', async () => {
+    const res = await accountCollection.insertOne({
+      name: 'Test',
+      email: 'test@gmail.com',
+      password: 123,
+      role: 'admin'
+    })
+
+    const id = res.insertedId
+    const accessToken = sign({ id }, env.jwtSecret)
+
+    await accountCollection.updateOne({ _id: id },
+      {
+        $set: {
+          accessToken
+        }
+      }
+    )
+
+    await request(app)
+      .post('/api/surveys')
+      .set('x-access-token', accessToken)
+      .send({
+        question: 'Question',
+        answers: [{
+          answer: 'Answer 1',
+          image: 'http://image-name.com'
+        }, {
+          answer: 'Answer 2'
+        }]
+      })
+      .expect(204)
   })
 })
