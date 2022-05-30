@@ -18,7 +18,7 @@ describe('Survey routes', () => {
   })
 
   beforeEach(async () => {
-    surveyCollection = await MongoHelper.getCollection('survey')
+    surveyCollection = await MongoHelper.getCollection('surveys')
     await surveyCollection.deleteMany({})
     accountCollection = await MongoHelper.getCollection('accounts')
     await accountCollection.deleteMany({})
@@ -80,6 +80,38 @@ describe('Survey routes', () => {
       await request(app)
         .get('/api/surveys')
         .expect(403)
+    })
+
+    test('Should return 200 on load survey success with accessToken', async () => {
+      const res = await accountCollection.insertOne({
+        name: 'Test',
+        email: 'test@gmail.com',
+        password: 123
+      })
+
+      const id = res.insertedId
+      const accessToken = sign({ id }, env.jwtSecret)
+
+      await accountCollection.updateOne({ _id: id },
+        {
+          $set: {
+            accessToken
+          }
+        }
+      )
+
+      await surveyCollection.insertOne({
+        question: 'Test',
+        answers: [{
+          answer: 'any_answer'
+        }],
+        date: new Date()
+      })
+
+      await request(app)
+        .get('/api/surveys')
+        .set('x-access-token', accessToken)
+        .expect(200)
     })
   })
 })
