@@ -1,12 +1,33 @@
-// import { sign } from 'jsonwebtoken'
+import { sign } from 'jsonwebtoken'
 import { Collection } from 'mongodb'
 import request from 'supertest'
 import { MongoHelper } from '@/infra/db/mongodb/helpers/mongo-helper'
 import app from '../config/app'
-// import env from '../config/env'
+import env from '../config/env'
 
 let surveyCollection: Collection
 let accountCollection: Collection
+
+const makeAccessToken = async (): Promise<string> => {
+  const res = await accountCollection.insertOne({
+    name: 'Test',
+    email: 'test@gmail.com',
+    password: 123,
+    role: 'admin'
+  })
+
+  const id = res.insertedId
+  const accessToken = sign({ id }, env.jwtSecret)
+
+  await accountCollection.updateOne({ _id: id },
+    {
+      $set: {
+        accessToken
+      }
+    }
+  )
+  return accessToken
+}
 
 describe('Survey routes', () => {
   beforeAll(async () => {
@@ -25,13 +46,35 @@ describe('Survey routes', () => {
   })
 
   describe('PUT /surveys/:surveyId/results', () => {
-    test('Should return 403 if no accessToken provided', async () => {
+    test('Should return 403 if no accessToken is provided', async () => {
       await request(app)
         .put('/api/surveys/any_id/results')
         .send({
           answer: 'any_answer'
         })
         .expect(403)
+    })
+
+    test('Should return 200 on save survey result with accessToken', async () => {
+      const accessToken = await makeAccessToken()
+      const res = await surveyCollection.insertOne({
+        question: 'Question',
+        answers: [{
+          answer: 'Answer 1',
+          image: 'http://image-name.com'
+        }, {
+          answer: 'Answer 2'
+        }],
+        date: new Date()
+      })
+
+      await request(app)
+        .put(`/api/surveys/${res.insertedId}/results`)
+        .set('x-access-token', accessToken)
+        .send({
+          answer: 'Answer 1'
+        })
+        .expect(200)
     })
   })
 })
