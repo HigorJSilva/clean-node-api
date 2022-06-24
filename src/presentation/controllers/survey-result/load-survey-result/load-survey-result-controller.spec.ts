@@ -3,6 +3,7 @@ import { LoadSurveyResultController } from './load-survey-result-controller'
 import { InvalidParamError } from '@/presentation/errors'
 import { mockSurveyResultModel, throwError } from '@/domain/test'
 import { LoadSurveyResult } from '@/domain/usecases/survey-result/load-survey-result'
+import MockDate from 'mockdate'
 
 const mockRequest = (): HttpRequest => ({
   params: {
@@ -26,6 +27,14 @@ const makeSut = (): SutTypes => {
     loadSurveyResultStub
   }
 }
+
+beforeAll(() => {
+  MockDate.set(new Date())
+})
+
+afterAll(() => {
+  MockDate.reset()
+})
 
 describe('LoadSurveyResult Controller', () => {
   test('should call LoadSurveyById with correct value', async () => {
